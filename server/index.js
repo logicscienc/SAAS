@@ -20,12 +20,26 @@ database.connect();
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
+const allowedOrigins = [
+  "http://localhost:3000", // dev frontend
+  "https://saas-frontend-git-main-anju-kumaris-projects-d57c2c52.vercel.app" // hosted frontend
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000", // frontend URL
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = "The CORS policy for this site does not allow access from the specified Origin.";
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
+
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
