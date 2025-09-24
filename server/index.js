@@ -47,6 +47,11 @@ app.get("/", (req, res) => {
 	});
 });
 
+// health route
+app.get("/health", (req, res) => {
+  return res.json({ status: "ok" });
+});
+
 app.listen(PORT, () => {
 	console.log(`App is running at ${PORT}`)
 }) 

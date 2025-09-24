@@ -161,90 +161,21 @@ exports.getNoteById = async (req, res) => {
 // Update Note
 exports.updateNote = async (req, res) => {
   try {
-    console.log("=== Update Note Request ===");
-    console.log("REQ.PARAMS:", req.params);       // Log the URL params (note ID)
-    console.log("REQ.BODY:", req.body);           // Log the incoming JSON body
-    console.log("REQ.USER:", req.user);           // Log the logged-in user
-
-    const { id } = req.params; // Note ID from URL
+    const { id } = req.params;
     const { title, content } = req.body;
+    const tenantId = req.user.tenantId;
 
-  
-    
-    if (!req.user) {
-      console.error("User object missing in req.user");
-      return res.status(401).json({ success: false, message: "User not authenticated" });
-    }
+    if (!title && !content) return res.status(400).json({ success: false, message: "At least one field (title or content) is required" });
 
-      const tenantId = req.user.tenantId; // Use tenantId from JWT
-const userId = req.user.id;         // Use user id from JWT
-const userRole = req.user.role;
-
-    console.log("Computed tenantId:", tenantId);
-    console.log("Computed userId:", userId);
-
-    // 1. Validate input
-    if (!title && !content) {
-      console.warn("No fields provided to update");
-      return res.status(400).json({
-        success: false,
-        message: "At least one field (title or content) is required to update",
-      });
-    }
-
-    // 2. Validate user existence and tenant match
-    const user = await User.findById(userId).populate("tenant");
-    console.log("Fetched user from DB:", user);
-
-    if (!user) {
-      console.error("User not found in DB for ID:", userId);
-      return res.status(404).json({
-        success: false,
-        message: "User not found. Please log in again.",
-      });
-    }
-
-    if (!user.tenant || user.tenant._id.toString() !== tenantId) {
-      console.error("Tenant mismatch:", user.tenant?._id.toString(), tenantId);
-      return res.status(403).json({
-        success: false,
-        message: "You do not belong to this tenant",
-      });
-    }
-
-    // 3. Fetch note for this tenant
     const note = await Note.findOne({ _id: id, tenant: tenantId });
-    console.log("Fetched note:", note);
+    if (!note) return res.status(404).json({ success: false, message: "Note not found or you don't have access" });
 
-    if (!note) {
-      console.error("Note not found for ID:", id, "and tenant:", tenantId);
-      return res.status(404).json({
-        success: false,
-        message: "Note not found or you don't have access",
-      });
-    }
-
-    // 4. Check ownership OR allow Admin
-    if (note.createdBy.toString() !== userId && userRole !== "Admin") {
-      console.warn("User trying to update note without permission");
-      return res.status(403).json({
-        success: false,
-        message: "You can only update your own notes",
-      });
-    }
-
-    // 5. Update fields
+    // Update fields
     if (title) note.title = title;
     if (content) note.content = content;
 
     await note.save();
-    console.log("Note updated successfully:", note);
-
-    return res.status(200).json({
-      success: true,
-      data: note,
-      message: "Note updated successfully",
-    });
+    return res.status(200).json({ success: true, data: note, message: "Note updated successfully" });
   } catch (error) {
     console.error("Error updating note:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -255,66 +186,21 @@ const userRole = req.user.role;
 
 
 
+
 // Delete Note
 exports.deleteNote = async (req, res) => {
   try {
-    const { id } = req.params;              // Note ID from URL
-    const tenantId = req.user.tenantId;     // Tenant ID from JWT
-    const userId = req.user.id;             // User ID from JWT
-    const userRole = req.user.role;
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
 
-    console.log("=== Delete Note Request ===");
-    console.log("REQ.PARAMS:", req.params);
-    console.log("REQ.USER:", req.user);
-
-    // 1. Validate user existence
-    const user = await User.findById(userId);
-    if (!user) {
-      console.log("User not found in DB for ID:", userId);
-      return res.status(404).json({
-        success: false,
-        message: "User not found. Please log in again.",
-      });
-    }
-
-    // 2. Validate tenant match
-    if (user.tenant.toString() !== tenantId) {
-      console.log("Tenant mismatch. User tenant:", user.tenant, "JWT tenant:", tenantId);
-      return res.status(403).json({
-        success: false,
-        message: "You do not belong to this tenant",
-      });
-    }
-
-    // 3. Fetch note
     const note = await Note.findOne({ _id: id, tenant: tenantId });
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: "Note not found or you don't have access",
-      });
-    }
+    if (!note) return res.status(404).json({ success: false, message: "Note not found or you don't have access" });
 
-    // 4. Check ownership (or Admin)
-    if (note.createdBy.toString() !== userId && userRole !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "You can only delete your own notes",
-      });
-    }
-
-    // 5. Delete note
     await note.deleteOne();
-
-    return res.status(200).json({
-      success: true,
-      message: "Note deleted successfully",
-    });
-
+    return res.status(200).json({ success: true, message: "Note deleted successfully" });
   } catch (error) {
     console.error("Error deleting note:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 

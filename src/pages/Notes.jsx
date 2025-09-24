@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FaCrown, FaPlus } from 'react-icons/fa';
 import { useDispatch, useSelector } from "react-redux";
-import { getAllNotes, deleteNoteById } from "../services/operations/notesAPI";
+import { getAllNotes, deleteNoteById, upgradeTenant, getTenant } from "../services/operations/notesAPI";
 import { setTenant } from "../slices/tenantSlice";
+import { logout } from "../slices/authSlice";
+import ConfettiExplosion from 'react-confetti-explosion';
 import CreateNoteModal from "../components/CreateNoteModal";
 
 const Notes = () => {
@@ -12,10 +14,12 @@ const Notes = () => {
   const { user } = useSelector((state) => state.auth);
 
   const [showModal, setShowModal] = useState({ open: false, note: null });
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Fetch notes on page load
   useEffect(() => {
     if (user?.token) {
+       dispatch(getTenant()); 
       dispatch(getAllNotes());
     }
   }, [dispatch, user]);
@@ -47,11 +51,31 @@ const Notes = () => {
   const userName = user?.name || "Loading...";
   const notesCount = notes.length;
 
-  // Open create modal
   const handleCreateNote = () => setShowModal({ open: true, note: null });
-
-  // Open edit modal
   const handleEditNote = (note) => setShowModal({ open: true, note });
+
+  // --- Upgrade Handler ---
+  const handleUpgrade = async () => {
+    if (!tenant.slug) return;
+
+    setShowConfetti(true); // start fireworks animation
+
+    try {
+      // Call backend API to upgrade tenant
+      await dispatch(upgradeTenant(tenant.slug));
+
+      // Immediately update Redux to reflect new plan in UI
+      dispatch(setTenant({ ...tenant, plan: "Pro", noteLimit: Infinity }));
+
+    } catch (error) {
+      console.error("Upgrade failed:", error);
+    }
+
+    // Stop fireworks after 3 seconds
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 3000);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -68,17 +92,44 @@ const Notes = () => {
           <p className="text-sm text-gray-300">Logged in as: <span className="text-white">{userName}</span></p>
         </div>
 
-        <button
-          disabled={plan === "Pro"}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-md font-medium transition
-                      ${plan === "Pro"
-                        ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                        : "bg-yellow-500 text-black hover:bg-yellow-400"
-                      }`}
-        >
-          <FaCrown />
-          {plan === "Pro" ? "Plan: Pro" : "Upgrade to Pro"}
-        </button>
+        <div className="flex items-center gap-4">
+          {/* Upgrade Button */}
+          <button
+            onClick={handleUpgrade}
+            disabled={plan === "pro"}
+            className={`relative flex items-center gap-2 px-4 py-2 rounded-lg shadow-md font-medium transition
+              ${plan === "pro"
+                ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                : "bg-yellow-500 text-black hover:bg-yellow-400"
+              }`}
+          >
+            <FaCrown />
+            {plan === "pro" ? "Pro User" : "Upgrade to Pro"}
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => {
+              dispatch(logout());            // clear Redux state
+              window.location.href = "/"; // redirect to login page
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-400"
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* Fireworks animation */}
+        {showConfetti && (
+          <div className="fixed inset-0 flex justify-center items-center z-50 pointer-events-none">
+            <ConfettiExplosion
+              force={0.8}
+              duration={3000}
+              particleCount={200}
+              width={1600}
+            />
+          </div>
+        )}
       </header>
 
       <div className="flex flex-1">
@@ -121,7 +172,6 @@ const Notes = () => {
                   </div>
 
                   <div className="flex justify-end gap-4 mt-2">
-                    {/* Edit icon */}
                     <button onClick={() => handleEditNote(note)} className="text-blue-400 hover:text-blue-500 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
                            viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -130,7 +180,6 @@ const Notes = () => {
                       </svg>
                     </button>
 
-                    {/* Delete icon */}
                     <button onClick={() => dispatch(deleteNoteById(note._id))} className="text-red-400 hover:text-red-500 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
                            viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -149,7 +198,7 @@ const Notes = () => {
       {/* Create/Edit Note Modal */}
       {showModal.open && (
         <CreateNoteModal
-          note={showModal.note} // null for create, note object for edit
+          note={showModal.note}
           onClose={() => setShowModal({ open: false, note: null })}
         />
       )}
@@ -157,7 +206,13 @@ const Notes = () => {
   );
 };
 
-export default Notes;
+
+export default Notes;  
+
+
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { auth } = require("../middlewares/auth");
+const { auth, isAdmin } = require("../middlewares/auth");
 const { upgradeTenant, getTenant } = require("../controllers/Tenant");
 
 const Tenant = require("../models/Tenant");
@@ -22,6 +22,6 @@ router.get("/seed-tenants", async (req, res) => {
 router.get("/:slug", auth, getTenant);
 
 // Upgrade tenant plan (Admin only)
-router.post("/:slug/upgrade", auth, upgradeTenant);
+router.post("/:slug/upgrade", auth, isAdmin, upgradeTenant);
 
 module.exports = router;

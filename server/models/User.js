@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-console.log("✅ User model loaded");
+console.log(" User model loaded");
 
 
 const userSchema = new mongoose.Schema(

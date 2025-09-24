@@ -18,6 +18,6 @@ export const notesEndpoints = {
 // --- TENANT ENDPOINTS ---
 export const tenantEndpoints = {
   GET_TENANT_DETAILS_API: `${BASE_URL}/tenant/details`,         // Fetch tenant info for logged-in user
-  UPGRADE_TENANT_API: `${BASE_URL}/tenant/upgrade`,             // Upgrade to Pro plan
+   UPGRADE_TENANT_API: (slug) => `${BASE_URL}/tenant/${slug}/upgrade`,            // Upgrade to Pro plan
 };
 
